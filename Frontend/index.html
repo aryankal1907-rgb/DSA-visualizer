@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DSA Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<button id="themeBtn" class="ghost theme">Dark mode</button>
+
+<!-- STEP-BY-STEP START: welcome, topic list, language -->
+<div id="flow">
+  <div class="dots"><i class="dot on"></i><i class="dot"></i><i class="dot"></i></div>
+
+  <section class="screen active">
+    <div id="heroCells" class="cells"></div>
+    <h1>Welcome to DSA Visualizer</h1>
+    <p class="sub">Learn data structures and algorithms from zero. Watch every step run, then read the code in your own language.</p>
+    <div class="nav"><button class="go" data-go="1">Next</button></div>
+  </section>
+
+  <section class="screen">
+    <h2>What you will learn</h2>
+    <p class="sub">Every topic is taught in C, C++, Java and Python, in this order.</p>
+    <ol class="road" id="road"></ol>
+    <div class="nav"><button class="ghost go" data-go="0">Back</button><button class="go" data-go="2">Next</button></div>
+  </section>
+
+  <section class="screen">
+    <h2>Choose your language</h2>
+    <p class="sub">All code you see will be in this language. You can change it any time.</p>
+    <div class="lang-grid">
+      <button class="lang-btn" data-lang="C">C</button>
+      <button class="lang-btn" data-lang="C++">C++</button>
+      <button class="lang-btn" data-lang="Java">Java</button>
+      <button class="lang-btn" data-lang="Python">Python</button>
+    </div>
+    <div class="nav"><button class="ghost go" data-go="1">Back</button><button id="startBtn" disabled>Start learning</button></div>
+  </section>
+</div>
+
+<!-- LESSONS -->
+<div id="learn" class="app" hidden>
+  <aside>
+    <div class="brand"><b>DSA Visualizer</b><small>Your learning path</small></div>
+    <ul id="side"></ul>
+    <div class="side-bottom">
+      <label for="language">Code language</label>
+      <select id="language"><option>C</option><option>C++</option><option>Java</option><option>Python</option></select>
+    </div>
+  </aside>
+  <main>
+    <div class="crumb" id="crumb"></div>
+    <div class="lgrid" id="lgrid">
+      <div class="lcol">
+        <h2 id="lTitle"></h2>
+        <div id="lText"></div>
+        <div id="lVisual"></div>
+      </div>
+      <div class="rcol panel" id="rcol">
+        <div class="code-head"><h3>Code in <span id="cLang"></span></h3><button id="copyBtn" class="ghost">Copy</button></div>
+        <pre id="cBlock"></pre>
+      </div>
+    </div>
+    <div id="doneCard" class="panel donecard" hidden></div>
+    <div class="lfoot" id="lfoot">
+      <button class="ghost" id="lBack">Back</button>
+      <span id="lProg"></span>
+      <button id="lNext">Next</button>
+    </div>
+  </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
