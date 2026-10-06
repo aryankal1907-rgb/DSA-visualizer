@@ -1,0 +1,343 @@
+CIRCULAR QUEUE USING A LINKED LIST (ALGORITHM ONLY, NO CODE)
+Case study: a queue with capacity 5, starting empty.
+Operations used: enqueue, dequeue, peek, overflow, underflow, rotate left, rotate right
+
+
+==================================================================================
+0. HOW THE QUEUE IS STORED
+==================================================================================
+Idea : A circular singly linked list. The last node points back to the first node.
+       We keep ONE pointer, called rear. The front is always rear.next.
+
+Each node has two parts:
++--------+------------------------------------+
+| Part   | Meaning                            |
++--------+------------------------------------+
+| data   | the value stored in the node       |
+| next   | the address of the following node  |
++--------+------------------------------------+
+
+The queue keeps three things:
++----------+-----------------------------------------------+
+| Name     | Meaning                                       |
++----------+-----------------------------------------------+
+| rear     | pointer to the last node (NULL if empty)      |
+| size     | how many nodes are in the queue right now     |
+| capacity | the largest size we allow (5 in our example)  |
++----------+-----------------------------------------------+
+
+Why only a rear pointer?
+   front = rear.next, so one pointer gives us both ends. Adding at the rear and
+   removing at the front both take O(1) time.
+
+Why do we need a capacity?
+   A linked list can grow as long as memory is free. To show OVERFLOW, we set a
+   limit. (OVERFLOW can also happen in real life when memory runs out.)
+
+Picture for the queue 10, 20, 30, 40:
+
+        front                          rear
+          |                              |
+          v                              v
+        [10] ---> [20] ---> [30] ---> [40]
+          ^                              |
+          +------------------------------+   (rear.next points back to front)
+
+
+==================================================================================
+1. HELPER CHECKS
+==================================================================================
+isEmpty : the queue is empty when size = 0 (rear is NULL).
+isFull  : the queue is full when size = capacity.
+
+UNDERFLOW = trying to remove or read from an EMPTY queue.
+OVERFLOW  = trying to add to a FULL queue.
+
+
+==================================================================================
+2. ENQUEUE (insert at the rear)
+==================================================================================
+Idea : Add a new node after the rear node, then make it the new rear.
+
+STEPS
+1. Check isFull.
+   If size = capacity, print OVERFLOW and stop.
+   Why     : We must not add more nodes than the queue allows.
+   Example : Queue 20 30 40 50 60 (size 5), enqueue 70 gives OVERFLOW.
+
+2. Create a new node and store the value in data.
+   Why     : The value needs a place to live.
+
+3. If the queue is empty:
+      a) make new.next point to the new node itself
+      b) set rear = new node
+   Why     : A one-node circular list points to itself, so front = rear.next works.
+   Example : enqueue 10 into an empty queue gives rear = 10, and 10.next = 10.
+
+4. Otherwise (queue is not empty):
+      a) set new.next = rear.next        (the new node points to the front)
+      b) set rear.next = new node        (the old rear points to the new node)
+      c) set rear = new node             (the new node becomes the rear)
+   Why     : Order matters. Do (a) first. If you do (b) first, you lose the
+             address of the front node.
+   Example : Queue 10 20, enqueue 30: new.next = 10, 20.next = 30, rear = 30.
+
+5. Increase size by 1.
+
+Time: O(1)
+
+
+==================================================================================
+3. DEQUEUE (remove from the front)
+==================================================================================
+Idea : Remove the node that rear.next points to, and give back its value.
+
+STEPS
+1. Check isEmpty.
+   If size = 0, print UNDERFLOW and stop.
+   Why     : There is nothing to remove.
+
+2. Let front = rear.next.
+   Why     : The front node is the one to remove.
+
+3. Save front.data in a variable called value.
+   Why     : We must return the value after the node is deleted.
+
+4. If front and rear are the same node (only one node in the queue):
+      a) delete that node
+      b) set rear = NULL
+   Why     : The queue becomes empty.
+
+5. Otherwise:
+      a) set rear.next = front.next      (rear now skips over the old front)
+      b) delete the old front node
+   Why     : The second node becomes the new front.
+   Example : Queue 10 20 30 40, dequeue: rear(40).next = 20, delete 10.
+
+6. Decrease size by 1 and return value.
+
+Time: O(1)
+
+
+==================================================================================
+4. PEEK (look at the front without removing it)
+==================================================================================
+STEPS
+1. Check isEmpty. If size = 0, print UNDERFLOW and stop.
+   Why     : An empty queue has no front value.
+
+2. Return rear.next.data.
+   Why     : rear.next is the front node.
+   Example : Queue 10 20 30 40, peek returns 10. The queue does not change.
+
+Time: O(1)
+
+
+==================================================================================
+5. ROTATE LEFT (the front item goes to the back)
+==================================================================================
+Idea : Because the list is circular, we do not move any node. We only move the
+       rear pointer one step forward.
+
+STEPS (rotate left by k)
+1. If size is 0 or 1, stop. There is nothing to rotate.
+
+2. Set k = k mod size.
+   Why     : Rotating by the size gives the same queue, so extra turns are wasted.
+   Example : size 5, k = 7 is the same as k = 2.
+
+3. Repeat k times:
+      set rear = rear.next
+   Why     : The old front becomes the new rear. The second node becomes the new
+             front, because front is always rear.next.
+   Example : Queue 20 30 40, rotate left 1 gives 30 40 20.
+
+Time: O(k mod size). Each turn is just one pointer move.
+
+
+==================================================================================
+6. ROTATE RIGHT (the last item goes to the front)
+==================================================================================
+Idea : Move the rear pointer one step BACKWARD. A singly linked list has no
+       "previous" pointer, so we have two ways.
+
+METHOD A: direct (simple, slower)
+1. If size is 0 or 1, stop.
+2. Set k = k mod size.
+3. Repeat k times:
+      a) start at the front node (rear.next)
+      b) move forward until the next node is the rear
+         (now you are standing on the node just BEFORE the rear)
+      c) set rear = that node
+   Why     : The old rear becomes the new front, because it is now rear.next.
+   Example : Queue 20 30 40, rotate right 1 gives 40 20 30.
+Time: O(size x k), because each turn walks through the list.
+
+METHOD B: use rotate left (recommended)
+1. If size is 0 or 1, stop.
+2. Set k = k mod size.
+3. Do a rotate LEFT by (size - k) turns.
+   Why     : Turning right by k gives the same result as turning left by
+             (size - k). Rotate left is only one pointer move per turn.
+   Example : size 5, rotate right 2 = rotate left 3.
+Time: O(size - k), which is at most O(size).
+
+==================================================================================
+7. TRAVERSE AND DISPLAY
+==================================================================================
+Idea : TRAVERSE means visiting every node exactly once, from the front to the rear.
+       DISPLAY is a traverse where the action at each visit is "print the value".
+       Because the list is circular, there is NO NULL at the end. We must stop
+       when we arrive back at the front.
+
+TRAVERSE STEPS
+1. Check isEmpty.
+   If size = 0, print "Queue is empty" and stop.
+   Why     : With no nodes, rear is NULL, and reading rear.next would crash.
+
+2. Set front = rear.next, and set current = front.
+   Why     : The visit always starts at the front.
+
+3. Do the action on current (print its data, or count it, or add it to a sum).
+   Why     : This is the "visit". The action is the only part that changes between
+             display, count, sum and so on.
+
+4. Move forward: current = current.next.
+   Why     : We go to the next node in the circle.
+
+5. If current is NOT the front, go back to step 3. Otherwise, stop.
+   Why     : Arriving back at the front means every node has been visited once.
+   Important: this check comes AFTER the visit. If you checked first, you would
+              stop at once, because current already equals front at the start.
+              (This is the "do the step first, then check" loop.)
+
+   Another way: repeat steps 3 and 4 exactly "size" times, then stop.
+
+DISPLAY STEPS (the same loop, with a nicer print)
+   At step 3, print the data. Also:
+      - if current is the front, print the label FRONT next to it
+      - if current is the rear, print the label REAR next to it
+   Example output for the queue 20 30 40 50 60:
+      FRONT 20 -> 30 -> 40 -> 50 -> 60 REAR  (and the rear points back to 20)
+
+Trace for the queue 20 30 40 50 60 (display):
++-------+---------+----------------+----------------+----------------+
+| Round | current | Action (print) | Next current   | Back at front? |
++-------+---------+----------------+----------------+----------------+
+| 1     | 20      | print 20       | 30             | No             |
+| 2     | 30      | print 30       | 40             | No             |
+| 3     | 40      | print 40       | 50             | No             |
+| 4     | 50      | print 50       | 60             | No             |
+| 5     | 60      | print 60       | 20 (the front) | Yes, stop      |
++-------+---------+----------------+----------------+----------------+
+
+Same loop, different action (queue 20 30 40 50 60):
++-------------------+-------------------------+---------------------------+
+| What you want     | Action at each visit    | Result for 20 30 40 50 60 |
++-------------------+-------------------------+---------------------------+
+| Display           | print the data          | 20 30 40 50 60            |
+| Count the nodes   | add 1 to a counter      | 5                         |
+| Sum of the values | add the data to a total | 200                       |
+| Find the largest  | keep the bigger value   | 60                        |
++-------------------+-------------------------+---------------------------+
+
+Different queue sizes:
++---------------+-----------------------------------------------------------------+
+| Queue         | What happens                                                    |
++---------------+-----------------------------------------------------------------+
+| empty         | Print "Queue is empty" and stop                                 |
+| one node (20) | Visit 20. Its next is itself (the front), so stop after 1 visit |
+| five nodes    | Visit all 5, then stop when you are back at the front           |
++---------------+-----------------------------------------------------------------+
+
+Time : O(n), one visit per node
+Space: O(1), only the pointer called current is needed
+
+
+==================================================================================
+8. DRY RUN (case study, capacity 5)
+==================================================================================
++------+--------------------+-------------------------+-------+-------+------+
+| Step | Operation          | Queue (front to rear)   | Front | Rear  | Size |
++------+--------------------+-------------------------+-------+-------+------+
+| 0    | Start              | empty                   | NULL  | NULL  | 0    |
+| 1    | enqueue 10         | 10                      | 10    | 10    | 1    |
+| 2    | enqueue 20         | 10 20                   | 10    | 20    | 2    |
+| 3    | enqueue 30         | 10 20 30                | 10    | 30    | 3    |
+| 4    | enqueue 40         | 10 20 30 40             | 10    | 40    | 4    |
+| 5    | peek (returns 10)  | 10 20 30 40             | 10    | 40    | 4    |
+| 6    | dequeue (gives 10) | 20 30 40                | 20    | 40    | 3    |
+| 7    | rotate left 1      | 30 40 20                | 30    | 20    | 3    |
+| 8    | rotate right 1     | 20 30 40                | 20    | 40    | 3    |
+| 9    | enqueue 50         | 20 30 40 50             | 20    | 50    | 4    |
+| 10   | enqueue 60         | 20 30 40 50 60          | 20    | 60    | 5    |
+| 11   | enqueue 70         | OVERFLOW, no change     | 20    | 60    | 5    |
+| 12   | rotate left 2      | 40 50 60 20 30          | 40    | 30    | 5    |
+| 13   | rotate right 2     | 20 30 40 50 60          | 20    | 60    | 5    |
++------+--------------------+-------------------------+-------+-------+------+
+
+Step 13 using Method B: rotate right 2 = rotate left (5 - 2) = 3 turns
+   40 50 60 20 30  -->  50 60 20 30 40  -->  60 20 30 40 50  -->  20 30 40 50 60
+
+Emptying the queue after step 13:
+   dequeue gives 20, 30, 40, 50, 60 one by one. The size goes 5, 4, 3, 2, 1, 0.
+   On the LAST dequeue (one node), rear becomes NULL.
+   One more dequeue (or peek) now prints UNDERFLOW.
+
+
+==================================================================================
+9. SPECIAL CASES
+==================================================================================
++--------------+-----------------------------+---------------------------------------+
+| Operation    | Situation                   | What to do                            |
++--------------+-----------------------------+---------------------------------------+
+| Enqueue      | Queue is full               | Print OVERFLOW and stop               |
+| Enqueue      | Queue is empty              | New node points to itself             |
+| Dequeue      | Queue is empty              | Print UNDERFLOW and stop              |
+| Dequeue      | Only one node in queue      | Free it, then set rear to NULL        |
+| Peek         | Queue is empty              | Print UNDERFLOW and stop              |
+| Rotate L / R | Size is 0 or 1              | Do nothing, nothing to rotate         |
+| Rotate L / R | k is bigger than size       | Use k = k mod size first              |
++--------------+-----------------------------+---------------------------------------+
+
+
+==================================================================================
+10. COMPLEXITY
+==================================================================================
++----------------------------+------------------------+--------------+
+| Operation                  | Time                   | Extra space  |
++----------------------------+------------------------+--------------+
+| Enqueue                    | O(1)                   | O(1)         |
+| Dequeue                    | O(1)                   | O(1)         |
+| Peek                       | O(1)                   | O(1)         |
+| isEmpty / isFull           | O(1)                   | O(1)         |
+| Rotate left by k           | O(k mod n)             | O(1)         |
+| Rotate right (Method A)    | O(n x (k mod n))       | O(1)         |
+| Rotate right (Method B)    | O(n - (k mod n))       | O(1)         |
+| Display                    | O(n)                   | O(1)         |
++----------------------------+------------------------+--------------+
+The queue itself uses O(n) space, one node per item.
+
+Why use a circular linked list instead of an array queue?
+   - No shifting of items and no wasted empty slots.
+   - The size can grow one node at a time.
+   - Rotate left costs only one pointer move per turn.
+
+
+==================================================================================
+11. PREDICT (try before you read the answer)
+==================================================================================
+Q1. The queue is 20 30 40 50 60 (capacity 5). What happens on enqueue 70?
+A1. OVERFLOW. The size already equals the capacity, and nothing changes.
+
+Q2. The queue has one node, 20. After dequeue, what is rear?
+A2. NULL. The queue is empty, and the next dequeue gives UNDERFLOW.
+
+Q3. The queue is 20 30 40 50 60. After rotate left 1, what is the front?
+A3. 30. The old front, 20, goes to the back.
+
+Q4. The queue is 20 30 40 50 60. After rotate right 1, what is the front?
+A4. 60. The old rear moves to the front.
+
+Q5. The size is 4. Rotate left by 6 is the same as rotate left by what?
+A5. 2, because 6 mod 4 = 2.
