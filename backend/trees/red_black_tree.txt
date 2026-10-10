@@ -1,0 +1,297 @@
+RED-BLACK TREE: INSERTION AND DELETION (ALGORITHM ONLY, NO CODE)
+Case study keys for insertion : 10, 20, 30, 40, 50, 25, 27
+Case study deletions          : 25, 10, 50, 20 (from the tree we get after inserting)
+Notation: 20B means key 20 coloured BLACK. 20R means key 20 coloured RED.
+          "20B (10R, 30R)" means 20 is black with left child 10 (red), right child 30 (red).
+
+
+==================================================================================
+0. WHAT IS A RED-BLACK TREE?
+==================================================================================
+A red-black tree is a Binary Search Tree (BST) where every node has a colour, RED
+or BLACK. The colour rules keep the tree balanced, so it never becomes a straight
+line.
+
+Why do we need it?
+   Insert 10, 20, 30, 40, 50 into a plain BST and you get a straight line (height
+   5). Searching then takes O(n). A red-black tree fixes the shape after every
+   insert and delete, so searching stays O(log n).
+
+THE 5 PROPERTIES
+1. Every node is either red or black.
+2. The root is black.
+3. Every leaf (the empty NIL spot at the end of a path) is black.
+4. A red node cannot have a red child. (No two reds in a row.)
+5. Every path from a node down to its NIL leaves has the SAME number of black nodes.
+   (This number is called the black-height.)
+
+What these rules give us:
+   - The longest path is at most 2 times the shortest path (the shortest has only
+     black nodes, the longest alternates red and black).
+   - Height is at most 2 x log2(n + 1), so search, insert and delete are O(log n).
+
+Terms used below:
++--------------+----------------------------------------------------------------+
+| Term         | Meaning                                                        |
++--------------+----------------------------------------------------------------+
+| Parent       | the node directly above                                        |
+| Grandparent  | the parent of the parent                                       |
+| Uncle        | the sibling of the parent (the other child of the grandparent) |
+| Sibling      | the other child of the same parent                             |
+| NIL          | an empty child spot; counts as a BLACK leaf                    |
+| Black-height | number of black nodes on a path down to NIL                    |
++--------------+----------------------------------------------------------------+
+
+How it compares:
++----------------------+---------------------------+----------------------------+--------------------------+
+|                      | Plain BST                 | AVL tree                   | Red-Black tree           |
++----------------------+---------------------------+----------------------------+--------------------------+
+| Balance rule         | none                      | balance factor -1, 0 or +1 | 5 colour rules           |
+| Height (n nodes)     | up to n (a straight line) | about 1.44 x log2(n)       | at most 2 x log2(n+1)    |
+| Rotations per insert | 0                         | at most 2                  | at most 2                |
+| Rotations per delete | 0                         | up to O(log n)             | at most 3                |
+| Best for             | simple, random data       | many searches              | many inserts and deletes |
++----------------------+---------------------------+----------------------------+--------------------------+
+
+
+==================================================================================
+1. THE TWO TOOLS: ROTATION AND RECOLOURING
+==================================================================================
+A rotation changes the shape of the tree but KEEPS the BST order (left < node < right).
+
+LEFT ROTATE at x                      RIGHT ROTATE at y (the reverse)
+
+      x                y                     y                x
+     / \              / \                   / \              / \
+    a   y     ==>    x   c                 x   c     ==>    a   y
+       / \          / \                   / \                  / \
+      b   c        a   b                 a   b                b   c
+
+LEFT ROTATE at x, steps:
+1. Let y = the right child of x.
+2. Move y's left child (b) to become x's right child.
+3. Put y where x was (y takes x's parent).
+4. Make x the left child of y.
+
+RIGHT ROTATE at y is the mirror: swap "left" and "right" in the steps above.
+
+RECOLOURING simply changes a node's colour. It does not change the shape.
+
+
+==================================================================================
+2. SEARCH
+==================================================================================
+Same as a BST: start at the root. If the key is smaller, go left. If larger, go
+right. Stop when you find it, or reach NIL (not found). Time: O(log n).
+
+
+==================================================================================
+3. INSERTION
+==================================================================================
+Idea : Insert like a BST, colour the new node RED, then repair any broken rule.
+       Only rule 2 (root black) or rule 4 (no red-red) can break.
+
+STEPS (call the new node z)
+1. Insert z as in a plain BST: compare, go left or right, attach it as a leaf.
+   Colour z RED.
+   Why     : A red node does not change any black-height (rule 5 stays true).
+
+2. If z is the root: colour it BLACK and stop.
+
+3. If z's parent is BLACK: stop. No rule is broken.
+
+4. Otherwise z's parent is RED. Because the root is black, the parent is not the
+   root, so a grandparent exists. Find the uncle.
+
+5. CASE 1: the uncle is RED.
+      a) colour the parent BLACK
+      b) colour the uncle BLACK
+      c) colour the grandparent RED
+      d) set z = the grandparent and go back to step 2
+   Why     : The black-height stays the same, and the red-red problem may move up.
+
+6. CASE 2: the uncle is BLACK (or NIL) and z is on the INSIDE (a triangle):
+   the parent is a left child and z is a right child, or the reverse.
+      a) rotate at the PARENT: left rotate if z is a right child, right rotate if
+         z is a left child
+      b) set z = the old parent (it is now the lower node)
+      c) go to case 3
+   Why     : This straightens the triangle into a line.
+
+7. CASE 3: the uncle is BLACK (or NIL) and z is on the OUTSIDE (a line):
+      a) colour the parent BLACK
+      b) colour the grandparent RED
+      c) rotate at the GRANDPARENT in the opposite direction of the line:
+            left-left line   -> right rotate at the grandparent
+            right-right line -> left rotate at the grandparent
+      d) stop
+   Why     : The parent becomes the top of the group with two red-free children.
+
+8. Finally, colour the root BLACK.
+
+If the parent is a RIGHT child of the grandparent, everything above is mirrored
+(swap left and right in cases 2 and 3).
+
+THE THREE CASES AT A GLANCE
++------+--------+--------------+-------------------------------------+--------------------------------------------------------------------+-----------------------------+
+| Case | Parent | Uncle        | Shape of the new node               | Fix                                                                | What next                   |
++------+--------+--------------+-------------------------------------+--------------------------------------------------------------------+-----------------------------+
+| 1    | red    | red          | any                                 | recolor parent and uncle BLACK, grandparent RED                    | repeat from the grandparent |
+| 2    | red    | black or NIL | triangle (left-right or right-left) | rotate at the parent to make a line                                | go to case 3                |
+| 3    | red    | black or NIL | line (left-left or right-right)     | parent BLACK, grandparent RED, rotate at grandparent the other way | stop                        |
++------+--------+--------------+-------------------------------------+--------------------------------------------------------------------+-----------------------------+
+
+DRY RUN (insert 10, 20, 30, 40, 50, 25, 27)
++------+--------+------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------+
+| Step | Insert | What happens                                                                                                           | Tree after (key+colour, children in brackets) |
++------+--------+------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------+
+| 1    | 10     | new root, colour it black                                                                                              | 10B                                           |
+| 2    | 20     | parent 10 is black, no problem                                                                                         | 10B (-, 20R)                                  |
+| 3    | 30     | parent 20 red, uncle NIL: case 3 (right-right). Left rotate at 10, 20 black, 10 red                                    | 20B (10R, 30R)                                |
+| 4    | 40     | parent 30 red, uncle 10 red: case 1. Recolor 30 and 10 black, 20 red, then root black                                  | 20B (10B, 30B (-, 40R))                       |
+| 5    | 50     | parent 40 red, uncle NIL: case 3 (right-right). Left rotate at 30, 40 black, 30 red                                    | 20B (10B, 40B (30R, 50R))                     |
+| 6    | 25     | goes under 30. Parent 30 red, uncle 50 red: case 1. 30 and 50 black, 40 red; 40 has a black parent, stop               | 20B (10B, 40R (30B (25R, -), 50B))            |
+| 7    | 27     | goes right of 25. Parent 25 red, uncle NIL: case 2 (triangle). Left rotate at 25, right rotate at 30, 27 black, 30 red | 20B (10B, 40R (27B (25R, 30R), 50B))          |
++------+--------+------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------+
+
+Final tree after step 7 (B = black, R = red):
+
+                20B
+              /     \
+           10B       40R
+                    /    \
+                 27B      50B
+                /   \
+             25R     30R
+
+Check: root is black. No red node has a red child. Every path from the root to NIL
+has 2 black nodes (20 and one more). All 5 properties hold.
+
+
+==================================================================================
+4. DELETION
+==================================================================================
+Idea : Delete like a BST. If a BLACK node was removed, one path lost a black node,
+       so the tree needs repair. We call the problem "double black".
+
+PART A: REMOVE THE NODE LIKE A BST
+1. Search for the node z that holds the key. If it is not found, stop.
+
+2. If z has TWO children:
+      a) find the successor y (the smallest key in z's right subtree)
+      b) copy y's key into z (z keeps its own colour)
+      c) now delete the old node y instead. It has at most one child.
+   Example : In the starting tree, delete 40. Its successor is 50. Put 50 in 40's
+             node, then delete the old 50 node (a black leaf).
+
+3. Now z has at most one child. Let x be that child (or NIL if there is none).
+   Remember the colour of z, and remember x's parent (even when x is NIL).
+
+4. Replace z by x (x takes z's place) and delete z.
+
+5. Decide what to do:
++----------------+-------------+-------------------------------------------+
+| Colour removed | Colour of x | What to do                                |
++----------------+-------------+-------------------------------------------+
+| red            | -           | Done. No rule is broken                   |
+| black          | red         | Colour x black. Done                      |
+| black          | black       | x is "double black": run the fix-up cases |
++----------------+-------------+-------------------------------------------+
+
+PART B: THE FIX-UP (x is double black)
+Repeat while x is not the root and x is black. Let s = the sibling of x.
+Names used: for x as a LEFT child, the "near" child of s is s's left child and the
+"far" child of s is s's right child. If x is a RIGHT child, swap left and right.
+
+CASE 1: s is RED
+   a) colour s BLACK
+   b) colour the parent RED
+   c) rotate at the parent toward x (left rotate if x is a left child)
+   d) set s = x's new sibling (it is black now) and continue with cases 2, 3 or 4
+   Why     : This makes the sibling black without changing any black-height.
+
+CASE 2: s is BLACK and BOTH children of s are black
+   a) colour s RED
+   b) move the problem up: set x = the parent
+   c) if the new x is RED, colour it BLACK and stop. Otherwise repeat the loop.
+   Why     : Both sides lose one black, so the extra black moves to the parent.
+
+CASE 3: s is BLACK, the NEAR child is RED, the FAR child is BLACK
+   a) colour the near child BLACK
+   b) colour s RED
+   c) rotate at s away from x (right rotate if x is a left child)
+   d) set s = x's new sibling and continue with case 4
+   Why     : This moves the red child to the far side.
+
+CASE 4: s is BLACK and the FAR child is RED
+   a) s takes the colour of the parent
+   b) colour the parent BLACK
+   c) colour the far child BLACK
+   d) rotate at the parent toward x (left rotate if x is a left child)
+   e) stop
+   Why     : The rotation brings a black node onto x's path, so the missing black
+             is replaced.
+
+When the loop ends, colour x BLACK. If x is the root, simply stop.
+
+THE FOUR CASES AT A GLANCE
++------+-----------+---------------------------------+-------------------------------------------------------------------------------------+--------------------------------------------------------+
+| Case | Sibling s | Children of s                   | Fix                                                                                 | What next                                              |
++------+-----------+---------------------------------+-------------------------------------------------------------------------------------+--------------------------------------------------------+
+| 1    | red       | both black (always)             | s black, parent red, rotate at parent toward x                                      | becomes case 2, 3 or 4                                 |
+| 2    | black     | both black                      | colour s red, move the problem up: x = parent                                       | repeat. If the parent is red, colour it black and stop |
+| 3    | black     | near child red, far child black | near child black, s red, rotate at s away from x                                    | becomes case 4                                         |
+| 4    | black     | far child red                   | s takes the parent colour, parent black, far child black, rotate at parent toward x | stop                                                   |
++------+-----------+---------------------------------+-------------------------------------------------------------------------------------+--------------------------------------------------------+
+
+DRY RUN (delete 25, 10, 50, 20 from the tree built above)
++------+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------+
+| Step | Delete | What happens                                                                                                                                                                          | Tree after                           |
++------+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------+
+| 0    | -      | starting tree (from the insertion run)                                                                                                                                                | 20B (10B, 40R (27B (25R, 30R), 50B)) |
+| 1    | 25     | red leaf: just remove it                                                                                                                                                              | 20B (10B, 40R (27B (-, 30R), 50B))   |
+| 2    | 10     | black leaf, sibling 40 is red: case 1 (40 black, 20 red, left rotate at 20). New sibling 27 has far child 30 red: case 4 (27 takes red, 20 black, 30 black, left rotate at 20)        | 40B (27R (20B, 30B), 50B)            |
+| 3    | 50     | black leaf, sibling 27 is red: case 1 (27 black, 40 red, right rotate at 40). New sibling 30 has two black children: case 2 (30 red). Parent 40 is red, so colour it black            | 27B (20B, 40B (30R, -))              |
+| 4    | 20     | black leaf, sibling 40 is black, near child 30 red, far child NIL: case 3 (30 black, 40 red, right rotate at 40). Then case 4 (30 takes black, 27 black, 40 black, left rotate at 27) | 30B (27B, 40B)                       |
++------+--------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------+
+
+What the dry run covered: a red leaf (no repair), case 1 then 4, case 1 then 2 (with
+a red parent), and case 3 then 4. Every case appears at least once.
+
+
+==================================================================================
+5. COMPLEXITY
+==================================================================================
++-----------+----------+-----------+-------------+
+| Operation | Time     | Rotations | Extra space |
++-----------+----------+-----------+-------------+
+| Search    | O(log n) | 0         | O(1)        |
+| Insert    | O(log n) | at most 2 | O(1)        |
+| Delete    | O(log n) | at most 3 | O(1)        |
++-----------+----------+-----------+-------------+
+The tree itself uses O(n) space, one node per key (plus one colour bit).
+Recolouring can travel up the tree (insert case 1, delete case 2), but it is only
+O(log n) steps in total.
+
+
+==================================================================================
+6. PREDICT (try before you read the answer)
+==================================================================================
+Q1. You insert a key into an empty tree. What colour is it?
+A1. Black, because the root must be black.
+
+Q2. You insert a new node whose parent is black. What do you do?
+A2. Nothing. No rule is broken.
+
+Q3. The new node's parent and uncle are both red. Which case, and what is the fix?
+A3. Case 1. Make the parent and uncle black, the grandparent red, then check the
+    grandparent.
+
+Q4. You delete a RED leaf. What repair is needed?
+A4. None. A red node does not count in the black-height.
+
+Q5. You delete a black leaf and its sibling is red. Which case?
+A5. Case 1. Make the sibling black, the parent red, rotate toward x.
+
+Q6. What is the largest number of rotations for one insert, and for one delete?
+A6. Insert: 2. Delete: 3.

@@ -1,0 +1,276 @@
+B-TREE: INSERTION AND DELETION (ALGORITHM ONLY, NO CODE)
+Case study: a B-tree of ORDER 3 (every node holds at most 2 keys).
+Insert keys  : 10, 20, 30, 40, 50, 60, 70
+Delete keys  : 10, 70, 40, 20 (from the tree we get after inserting)
+Notation: [10 20] is one node holding keys 10 and 20.
+          [40] ([20] ([10] [30]), [60] ([50] [70])) means: root [40] with two
+          children, [20] and [60], and each of them has two leaf children.
+
+
+==================================================================================
+0. WHAT IS A B-TREE?
+==================================================================================
+A B-tree is a self-balancing multiway search tree. Unlike a binary tree, one node
+can hold SEVERAL keys and have SEVERAL children.
+
+Why do we need it?
+   Databases and file systems keep data on a disk, and reading a disk is slow. A
+   B-tree is short and wide, so a search reads only a few nodes from the disk.
+
+THE PROPERTIES (for a tree of order m, where m = the maximum number of children)
+1. Every node has at most m children, so at most m - 1 keys.
+2. Every node except the root has at least ceil(m / 2) children, so at least
+   ceil(m / 2) - 1 keys. (This is called the minimum.)
+3. The root has at least 2 children if it is not a leaf (at least 1 key).
+4. A node with k keys has k + 1 children (if it is not a leaf).
+5. The keys inside a node are sorted.
+6. For a key, everything in the child on its left is smaller, and everything in
+   the child on its right is larger. (The BST idea, with many keys.)
+7. ALL LEAVES ARE AT THE SAME LEVEL. This is what keeps the tree balanced.
+
++------------------------+----------+-------------------------+---------------------+------------------------------------+
+| Order m (max children) | Max keys | Min children (not root) | Min keys (not root) | Median index when a node overflows |
++------------------------+----------+-------------------------+---------------------+------------------------------------+
+| 3                      | 2        | 2                       | 1                   | 1                                  |
+| 4                      | 3        | 2                       | 1                   | 2                                  |
+| 5                      | 4        | 3                       | 2                   | 2                                  |
+| 6                      | 5        | 3                       | 2                   | 3                                  |
+| formula                | m - 1    | ceil(m / 2)             | ceil(m / 2) - 1     | floor(m / 2), counting from 0      |
++------------------------+----------+-------------------------+---------------------+------------------------------------+
+
+Our case study uses order 3: max 2 keys, min 1 key per node (except the root).
+Words used below:
+   OVERFLOW  = a node has m keys (one too many)
+   UNDERFLOW = a node has fewer than the minimum keys
+   MEDIAN    = the middle key of an overflowing node
+   SEPARATOR = the key in the parent that sits between two children
+
+How a node looks (order 3, node [20 40] with 3 children):
+
+           [ 20 | 40 ]
+           /    |     \
+       (< 20) (20..40) (> 40)
+
+
+==================================================================================
+1. SEARCH
+==================================================================================
+STEPS
+1. Start at the root.
+2. In the current node, compare the key with the keys from left to right.
+      - if it equals a key: FOUND, stop
+      - otherwise find the first key that is larger, and go to the child just
+        before that key (if all keys are smaller, go to the last child)
+3. If you reach a leaf and the key is not there: NOT FOUND.
+Time: O(log n) nodes read.
+
+
+==================================================================================
+2. INSERTION
+==================================================================================
+Idea : Always insert into a LEAF. If the leaf gets too full, split it and push the
+       middle key up. The split can travel upward.
+
+STEPS
+1. Search for the key. If it already exists, stop (no duplicates).
+   Why     : The search also finds the correct leaf to insert into.
+
+2. Insert the key into that leaf, in sorted order.
+
+3. If the leaf now has at most m - 1 keys: DONE.
+
+4. Otherwise the node overflows (m keys). SPLIT it:
+      a) find the median at index floor(m / 2), counting from 0
+      b) the keys BEFORE the median stay in the original node (left node)
+      c) the keys AFTER the median go to a NEW node (right node)
+      d) if the node is not a leaf, share its children too: the first
+         floor(m / 2) + 1 children stay left, the rest go to the right node
+      e) move the median UP into the parent, in sorted order, with the left node
+         and the right node as the children on its two sides
+   Example : Overflowing leaf [10 20 30] (order 3): median is 20. Left = [10],
+             right = [30], and 20 moves up.
+
+5. If the parent now overflows, repeat step 4 on the parent.
+
+6. If the node that overflowed was the ROOT (it has no parent): create a NEW root
+   that holds only the median. The old root's two halves become its children.
+   The tree grows one level taller.
+   Why     : This is the ONLY way a B-tree gets taller, so all leaves always stay
+             on the same level.
+
+THE CASES AT A GLANCE
++------+------------------------------------------+--------------------------------------------------------------------------------+
+| Case | Situation                                | What to do                                                                     |
++------+------------------------------------------+--------------------------------------------------------------------------------+
+| A    | Key already exists                       | Stop (no duplicates)                                                           |
+| B    | Leaf has room (fewer than m - 1 keys)    | Insert in sorted order. Done                                                   |
+| C    | Leaf overflows (m keys), parent has room | Split the leaf, move the median up into the parent                             |
+| D    | Parent also overflows                    | Split the parent too and repeat upward                                         |
+| E    | The root overflows                       | Split the root, make a NEW root with the median. The tree grows 1 level taller |
++------+------------------------------------------+--------------------------------------------------------------------------------+
+
+DRY RUN (order 3, insert 10, 20, 30, 40, 50, 60, 70)
++------+--------+------------------------------------------------------------------------------------------------------+-------------------------------------------+
+| Step | Insert | What happens                                                                                         | Tree after (order 3, [ ] = node)          |
++------+--------+------------------------------------------------------------------------------------------------------+-------------------------------------------+
+| 1    | 10     | root is a leaf with room                                                                             | [10]                                      |
+| 2    | 20     | leaf has room                                                                                        | [10 20]                                   |
+| 3    | 30     | leaf overflows [10 20 30]: median 20 goes up, new root                                               | [20] ([10] [30])                          |
+| 4    | 40     | goes right, leaf has room                                                                            | [20] ([10] [30 40])                       |
+| 5    | 50     | leaf overflows [30 40 50]: median 40 goes up into the root                                           | [20 40] ([10] [30] [50])                  |
+| 6    | 60     | goes right, leaf has room                                                                            | [20 40] ([10] [30] [50 60])               |
+| 7    | 70     | leaf overflows [50 60 70]: 60 goes up. Root overflows [20 40 60]: 40 goes up, new root. Height grows | [40] ([20] ([10] [30]), [60] ([50] [70])) |
++------+--------+------------------------------------------------------------------------------------------------------+-------------------------------------------+
+
+Final tree after step 7:
+
+                 [ 40 ]
+               /        \
+         [ 20 ]          [ 60 ]
+         /    \          /    \
+     [10]    [30]     [50]    [70]
+
+Check: every node has 1 or 2 keys (min 1, max 2), and all leaves are on level 3.
+
+
+==================================================================================
+3. DELETION
+==================================================================================
+Idea : Make sure the key to delete is in a LEAF. Remove it. If the leaf has too few
+       keys, borrow a key from a sibling, or merge with a sibling.
+
+STEPS
+1. Search for the key. If it is not found, stop.
+
+2. If the key is in an INTERNAL node:
+      a) find its inorder PREDECESSOR (the largest key in the left subtree: go to
+         the left child, then keep going to the LAST child until a leaf)
+         (or the inorder SUCCESSOR: the smallest key in the right subtree)
+      b) replace the key with that predecessor
+      c) now delete the predecessor key from its leaf (continue at step 3)
+   Why     : A leaf is the easy place to delete from.
+
+3. Remove the key from the leaf.
+
+4. If the leaf still has at least the minimum keys: DONE.
+
+5. Otherwise the node UNDERFLOWS (call it N). Fix it:
+
+   CASE D: BORROW FROM THE LEFT. If the LEFT sibling has more than the minimum keys:
+      a) the separator key in the parent moves DOWN to the front of N
+      b) the left sibling's LARGEST key moves UP into the parent
+      c) if N is not a leaf, the left sibling's last child becomes N's first child
+      d) DONE
+
+   CASE E: BORROW FROM THE RIGHT. Else, if the RIGHT sibling has more than the
+   minimum keys:
+      a) the separator key in the parent moves DOWN to the end of N
+      b) the right sibling's SMALLEST key moves UP into the parent
+      c) if N is not a leaf, the right sibling's first child becomes N's last child
+      d) DONE
+
+   CASE F: MERGE. Else (no sibling can spare a key):
+      a) join N, the separator key from the parent, and a sibling into ONE node
+         (use the left sibling if there is one, otherwise the right sibling)
+      b) remove the separator key and the extra child pointer from the parent
+      c) the merged node never overflows, because the sibling only had the minimum
+      d) the PARENT lost a key, so it may underflow: repeat step 5 on the parent
+
+   CASE G: ROOT SHRINKS. If the root becomes empty (0 keys) after a merge, its only
+   child becomes the new root. The tree gets one level shorter.
+   Why     : This is the ONLY way a B-tree gets shorter.
+
+   Order of preference: borrow left, then borrow right, then merge. Borrowing is
+   cheaper because it changes only 3 keys and no nodes are removed.
+
+THE CASES AT A GLANCE
++------+-------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+| Case | Situation                                                   | What to do                                                                                       |
++------+-------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+| A    | Key is in a leaf with more than the minimum keys            | Remove it. Done                                                                                  |
+| B    | Key is in a leaf with exactly the minimum (leaf underflows) | Fix the underflow: case D, E or F                                                                |
+| C    | Key is in an internal node                                  | Replace it with its inorder predecessor (or successor), then delete that key from the leaf       |
+| D    | Underflow, left sibling has a spare key                     | BORROW from the left (rotate right through the parent)                                           |
+| E    | Underflow, right sibling has a spare key                    | BORROW from the right (rotate left through the parent)                                           |
+| F    | Underflow, neither sibling has a spare key                  | MERGE with a sibling and the parent key between them. The parent may underflow, so repeat upward |
+| G    | The root loses its last key after a merge                   | The merged node becomes the new root. The tree gets 1 level shorter                              |
++------+-------------------------------------------------------------+--------------------------------------------------------------------------------------------------+
+
+Example of case D (borrow from the left, order 3):
++--------------------------------+--------+------------+---------------+
+|                                | Parent | Left child | Empty child N |
++--------------------------------+--------+------------+---------------+
+| Before borrowing from the LEFT | [50]   | [30 40]    | [ ]           |
+| After                          | [40]   | [30]       | [50]          |
++--------------------------------+--------+------------+---------------+
+(50 moved down into N, and 40 moved up into the parent.)
+
+DRY RUN (order 3, min keys 1; delete 10, 70, 40, 20 from the tree built above)
++------+--------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+
+| Step | Delete | What happens                                                                                                                                                                                                                  | Tree after (order 3, min keys 1)          |
++------+--------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+
+| 0    | -      | starting tree (from the insertion run)                                                                                                                                                                                        | [40] ([20] ([10] [30]), [60] ([50] [70])) |
+| 1    | 10     | leaf [10] becomes empty. No left sibling; right sibling [30] has no spare key: case F, merge leaf + 20 + [30] = [20 30]. Parent [ ] is now empty: merge with its right sibling [60] and key 40. The old root is empty: case G | [40 60] ([20 30] [50] [70])               |
+| 2    | 70     | leaf becomes empty. Left sibling [50] has no spare key, no right sibling: case F, merge [50] + 60 + empty = [50 60]                                                                                                           | [40] ([20 30] [50 60])                    |
+| 3    | 40     | internal key (root): case C. Predecessor is 30, the largest key on the left. Put 30 in the root, delete 30 from the leaf [20 30]                                                                                              | [30] ([20] [50 60])                       |
+| 4    | 20     | leaf becomes empty. Right sibling [50 60] has a spare key: case E, borrow. 30 moves down, 50 moves up                                                                                                                         | [50] ([30] [60])                          |
++------+--------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-------------------------------------------+
+
+What the dry run covered: a merge that travels up and shrinks the tree (step 1),
+a simple merge (step 2), deleting from an internal node (step 3) and borrowing
+from the right (step 4). Borrowing from the left is the mirror of step 4 and is
+shown in the small table above.
+
+
+==================================================================================
+4. SPECIAL CASES
+==================================================================================
++----------------------------------------+------------------------------------------+
+| Situation                              | What to do                               |
++----------------------------------------+------------------------------------------+
+| Insert into an empty tree              | Make a root leaf holding the key         |
+| Delete a key that is not in the tree   | Report: key not found                    |
+| Delete the last key of the root leaf   | The tree becomes empty                   |
+| The root has only 1 key                | Allowed. The root has no minimum         |
+| Both siblings can spare a key          | Borrow from the left (our preference)    |
++----------------------------------------+------------------------------------------+
+
+
+==================================================================================
+5. COMPLEXITY
+==================================================================================
++-----------+-------------------+--------------------+-------------+
+| Operation | Time (nodes read) | Time (comparisons) | Extra space |
++-----------+-------------------+--------------------+-------------+
+| Search    | O(log n)          | O(m x log n)       | O(1)        |
+| Insert    | O(log n)          | O(m x log n)       | O(1)        |
+| Delete    | O(log n)          | O(m x log n)       | O(1)        |
++-----------+-------------------+--------------------+-------------+
+The tree itself uses O(n) space. Height is about log base (m / 2) of n, so a large m
+makes a very short tree.
+
+
+==================================================================================
+6. PREDICT (try before you read the answer)
+==================================================================================
+Q1. In a B-tree of order 3, what is the maximum number of keys in a node?
+A1. 2 (m - 1). A node with 3 keys overflows and must split.
+
+Q2. A leaf [10 20] receives the key 30. What happens?
+A2. It overflows to [10 20 30]. The median 20 moves up. The leaf splits into [10]
+    and [30].
+
+Q3. What is the ONLY thing that makes a B-tree taller?
+A3. Splitting the root, which creates a new root.
+
+Q4. A leaf [30] (the minimum) loses its key. Its right sibling is [40 50]. What
+    do you do?
+A4. Borrow from the right. The separator moves down into the empty leaf, and 40
+    moves up into the parent.
+
+Q5. A leaf becomes empty and both siblings hold only the minimum. What do you do?
+A5. Merge with a sibling and the separator key. The parent loses one key.
+
+Q6. Why do all leaves stay on the same level?
+A6. The tree only grows at the root (split) and only shrinks at the root (merge),
+    never at the leaves.
