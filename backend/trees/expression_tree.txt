@@ -1,0 +1,215 @@
+EXPRESSION TREE (ALGORITHM ONLY, NO CODE)
+We use letters (A, B, C...) so the tree stores an expression, not a number.
+Case study postfix : A B + C * D E / -
+Same expression    : (A + B) * C - D / E
+
+
+==================================================================================
+0. WHAT IS AN EXPRESSION TREE?
+==================================================================================
+A binary tree that stores an arithmetic expression.
+   - Every LEAF is an operand (A, B, C...).
+   - Every INTERNAL node is an operator (+, -, *, /...).
+   - An operator node has two children: left operand and right operand.
+   - There are no brackets. The SHAPE of the tree shows the order of work.
+   - The deepest operators are done first. The ROOT is the last operator used.
+
+Tree for the case study:
+
+                    -
+                 /     \
+               *         /
+              / \       / \
+             +   C     D   E
+            / \
+           A   B
+
+Facts about this tree: 9 nodes = 5 leaves (A B C D E) + 4 operators (+ * / -).
+Height = 4 levels. The root is "-" because it is the LAST operation to run.
+
+The three traversals give the three notations:
++-----------+-------------------+------------------------------------+---------------+
+| Traversal | Order of visiting | Result for our tree                | What it gives |
++-----------+-------------------+------------------------------------+---------------+
+| Inorder   | left, root, right | A + B * C - D / E (needs brackets) | infix         |
+| Preorder  | root, left, right | - * + A B C / D E                  | prefix        |
+| Postorder | left, right, root | A B + C * D E / -                  | postfix       |
++-----------+-------------------+------------------------------------+---------------+
+
+
+==================================================================================
+1. BUILD THE TREE FROM A POSTFIX EXPRESSION
+==================================================================================
+Idea : Use a stack of small trees. Operands become one-node trees. An operator
+       joins the two trees on top of the stack.
+
+STEPS
+1. Create an empty stack (it will hold trees).
+
+2. Read the postfix expression from LEFT to RIGHT.
+
+3. If the symbol is an OPERAND:
+      create a new node with no children and push it.
+   Example : A becomes a one-node tree.
+
+4. If the symbol is an OPERATOR:
+      a) create a new node for the operator
+      b) pop the top tree: it becomes the RIGHT child
+      c) pop the next tree: it becomes the LEFT child
+      d) push the new tree on the stack
+   Why     : In postfix, the right operand is the last one pushed, so it is
+             popped first. Mixing this up flips - and / .
+
+5. At the end the stack must hold exactly ONE tree. It is the expression tree.
+   Its top node is the root.
+
+DRY RUN for A B + C * D E / -
++------+--------+----------------------------------------+-----------------------------------+
+| Step | Symbol | What happens                           | Stack of subtrees (bottom to top) |
++------+--------+----------------------------------------+-----------------------------------+
+| 1    | A      | make a leaf, push                      | A                                 |
+| 2    | B      | make a leaf, push                      | A, B                              |
+| 3    | +      | pop B (right), pop A (left), make T1   | T1                                |
+| 4    | C      | make a leaf, push                      | T1, C                             |
+| 5    | *      | pop C (right), pop T1 (left), make T2  | T2                                |
+| 6    | D      | make a leaf, push                      | T2, D                             |
+| 7    | E      | make a leaf, push                      | T2, D, E                          |
+| 8    | /      | pop E (right), pop D (left), make T3   | T2, T3                            |
+| 9    | -      | pop T3 (right), pop T2 (left), make T4 | T4 = the root                     |
++------+--------+----------------------------------------+-----------------------------------+
+Legend: T1 = +(A, B)    T2 = *(T1, C)    T3 = /(D, E)    T4 = -(T2, T3)
+
+
+==================================================================================
+2. BUILD THE TREE FROM A PREFIX EXPRESSION
+==================================================================================
+STEPS
+1. Create an empty stack of trees.
+2. Read the prefix expression from RIGHT to LEFT.
+3. If the symbol is an operand: make a leaf and push it.
+4. If the symbol is an operator:
+      a) make a new node
+      b) pop the top tree: it becomes the LEFT child
+      c) pop the next tree: it becomes the RIGHT child
+      d) push the new tree
+   Why     : We read backwards, so the first pop is now the LEFT side.
+5. At the end, the single tree on the stack is the answer.
+   Example : - * + A B C / D E gives the same tree as section 1.
+
+
+==================================================================================
+3. BUILD THE TREE FROM AN INFIX EXPRESSION
+==================================================================================
+STEPS
+1. Convert the infix expression to postfix with the stack algorithm from the
+   infix-to-postfix notes.
+2. Build the tree from that postfix with section 1.
+   Why     : Postfix already has the correct order, so we do not repeat the
+             precedence work.
+
+
+==================================================================================
+4. TRAVERSALS (ALL THREE USE THE SAME IDEA)
+==================================================================================
+Each traversal is a function that calls itself on the children.
+
+INORDER (gives infix)
+1. If the node is empty, stop.
+2. Do inorder on the left child.
+3. Visit the node (print it).
+4. Do inorder on the right child.
+   To show correct infix: print "(" before step 2 and ")" after step 4 for every
+   operator node. Do not add brackets around leaves.
+   Result  : (((A+B)*C)-(D/E))
+
+PREORDER (gives prefix)
+1. If the node is empty, stop.
+2. Visit the node.
+3. Do preorder on the left child.
+4. Do preorder on the right child.
+   Result  : - * + A B C / D E
+
+POSTORDER (gives postfix)
+1. If the node is empty, stop.
+2. Do postorder on the left child.
+3. Do postorder on the right child.
+4. Visit the node.
+   Result  : A B + C * D E / -
+   Why it matters: postorder visits both operands BEFORE their operator, which is
+   exactly the order needed to evaluate the expression.
+
+
+==================================================================================
+5. EVALUATING THE TREE (WITH EXPRESSIONS FOR NOW)
+==================================================================================
+Idea : Use postorder. Each node returns a piece of text to its parent.
+
+STEPS
+1. If the node is a leaf, return its name.
+   Example : the leaf A returns "A".
+2. Otherwise:
+      a) ask the left child for its piece
+      b) ask the right child for its piece
+      c) return "(" + left piece + operator + right piece + ")"
+3. The piece returned by the root is the full expression.
+   Result  : (((A+B)*C)-(D/E))
+
+Later, with numbers: a leaf returns its value, and an operator node returns the
+calculated result of "left operator right". The steps stay the same.
+
+
+==================================================================================
+6. OTHER BASIC OPERATIONS
+==================================================================================
+Count the nodes : count(node) = 0 if empty, else 1 + count(left) + count(right)
+                  Result for our tree: 9
+Height          : height(node) = 0 if empty, else 1 + bigger of (height(left),
+                  height(right)).   Result for our tree: 4
+Count the leaves: a node with no children counts 1, otherwise add the leaf counts
+                  of its children.   Result: 5
+
+
+==================================================================================
+7. SPECIAL CASES
+==================================================================================
++------------------------------------------------------+-------------------------------------+
+| Situation                                            | What happens                        |
++------------------------------------------------------+-------------------------------------+
+| Postfix is a single operand, like A                  | The tree is one leaf node, the root |
+| An operator finds fewer than 2 items on the stack    | Report: invalid postfix expression  |
+| After the last symbol the stack has more than 1 tree | Report: invalid postfix expression  |
+| After the last symbol the stack is empty             | Report: empty expression            |
++------------------------------------------------------+-------------------------------------+
+
+
+==================================================================================
+8. COMPLEXITY
+==================================================================================
++--------------------------------+------+-------------------------------------+
+| Operation                      | Time | Extra space                         |
++--------------------------------+------+-------------------------------------+
+| Build the tree from postfix    | O(n) | O(n) for the stack                  |
+| Inorder / preorder / postorder | O(n) | O(h) for the recursion (h = height) |
+| Count nodes or find height     | O(n) | O(h)                                |
++--------------------------------+------+-------------------------------------+
+The tree itself uses O(n) space, one node per symbol.
+
+
+==================================================================================
+9. PREDICT (try before you read the answer)
+==================================================================================
+Q1. Build the tree for the postfix A B C * +. What is the root, and what are its
+    children?
+A1. The root is +. Its left child is A, its right child is the tree *(B, C).
+
+Q2. Which traversal gives the postfix expression?
+A2. Postorder (left, right, root).
+
+Q3. In the case study tree, why is "-" the root?
+A3. It is the LAST operation to run. Both * and / must finish before it.
+
+Q4. The tree does not store brackets. How does it remember the order of work?
+A4. By its shape. Operators lower in the tree are done first.
+
+Q5. When building from postfix, which popped tree becomes the RIGHT child?
+A5. The first one popped (the top of the stack).

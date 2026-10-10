@@ -1,0 +1,238 @@
+INFIX TO POSTFIX AND PREFIX USING A STACK (ALGORITHM ONLY, NO CODE)
+We use letters (A, B, C...) and not numbers, so the answer is an expression.
+Case study expression : (A + B) * C - D / E
+Answer in postfix     : A B + C * D E / -
+Answer in prefix      : - * + A B C / D E
+
+
+==================================================================================
+0. WHAT ARE INFIX, POSTFIX AND PREFIX?
+==================================================================================
++----------+----------------------+-------------------+--------------------------+
+| Notation | Operator position    | Example for A + B | Brackets needed?         |
++----------+----------------------+-------------------+--------------------------+
+| Infix    | between the operands | A + B             | Yes, to change the order |
+| Postfix  | after the operands   | A B +             | Never                    |
+| Prefix   | before the operands  | + A B             | Never                    |
++----------+----------------------+-------------------+--------------------------+
+
+Why do we convert?
+   Humans like infix, but a computer finds it hard: it must remember brackets and
+   precedence. Postfix and prefix need NO brackets and NO precedence rules. A
+   computer reads them in one pass using a stack.
+
+
+==================================================================================
+1. PRECEDENCE AND ASSOCIATIVITY
+==================================================================================
++----------+-----------------------------+-----------------------------+---------------+
+| Operator | Meaning                     | Precedence (bigger = first) | Associativity |
++----------+-----------------------------+-----------------------------+---------------+
+| ^        | power                       | 3                           | right to left |
+| * / %    | multiply, divide, remainder | 2                           | left to right |
+| + -      | add, subtract               | 1                           | left to right |
+| ( )      | brackets                    | forced first                | -             |
++----------+-----------------------------+-----------------------------+---------------+
+
+Rule 1: an operator with HIGHER precedence is done first.
+Rule 2: for operators with EQUAL precedence, associativity decides.
+        A - B - C means (A - B) - C      (left to right)
+        A ^ B ^ C means A ^ (B ^ C)      (right to left)
+
+
+==================================================================================
+2. INFIX TO POSTFIX
+==================================================================================
+Idea : Operands go straight to the output. Operators wait on the stack until it is
+       their turn.
+
+STEPS
+1. Create an empty stack (for operators and brackets) and an empty output list.
+   Why     : The stack remembers operators that must wait.
+
+2. Read the infix expression from LEFT to RIGHT, one symbol at a time.
+
+3. If the symbol is an OPERAND (a letter or a number): add it to the output.
+   Why     : Operands keep the same order in postfix as in infix.
+   Example : A goes to the output at once.
+
+4. If the symbol is "(" : push it on the stack.
+   Why     : It marks the start of a bracket group.
+
+5. If the symbol is ")" : pop operators from the stack to the output until you
+   reach "(". Then remove "(" (do not output it or ")").
+   Why     : Everything inside the brackets must be finished first.
+   Example : For (A + B), the + is popped when ")" arrives.
+
+6. If the symbol is an OPERATOR:
+      a) While the stack is not empty AND the top is not "(" AND
+         ( the top has HIGHER precedence than the new operator, OR
+           the top has EQUAL precedence and the new operator is left to right ):
+            pop the top to the output.
+      b) Then push the new operator.
+   Why     : An operator already waiting must go first if it is stronger, or equal
+             and from the left. Otherwise the new one waits on top of it.
+   Example : "-" arrives and * is on top. * is stronger, so * is popped first.
+   For ^ (right to left): do NOT pop an equal ^, only pop a HIGHER one.
+
+7. After the last symbol, pop everything left on the stack to the output.
+   Why     : Waiting operators must still be used. If "(" is found here, the
+             brackets were not balanced: report an error.
+
+8. The output list is the postfix expression.
+
+DRY RUN for (A + B) * C - D / E
++------+--------+-------------------------------------+-----------------------+-------------------+
+| Step | Symbol | What happens                        | Stack (bottom to top) | Output            |
++------+--------+-------------------------------------+-----------------------+-------------------+
+| 1    | (      | push                                | (                     | (none)            |
+| 2    | A      | operand goes to output              | (                     | A                 |
+| 3    | +      | top is ( , so push                  | ( +                   | A                 |
+| 4    | B      | operand goes to output              | ( +                   | A B               |
+| 5    | )      | pop + to output, remove (           | (empty)               | A B +             |
+| 6    | *      | stack is empty, push                | *                     | A B +             |
+| 7    | C      | operand goes to output              | *                     | A B + C           |
+| 8    | -      | top * is higher: pop *, then push - | -                     | A B + C *         |
+| 9    | D      | operand goes to output              | -                     | A B + C * D       |
+| 10   | /      | top - is lower: just push           | - /                   | A B + C * D       |
+| 11   | E      | operand goes to output              | - /                   | A B + C * D E     |
+| 12   | end    | pop /, then pop -                   | (empty)               | A B + C * D E / - |
++------+--------+-------------------------------------+-----------------------+-------------------+
+Result: A B + C * D E / -
+
+
+==================================================================================
+3. INFIX TO PREFIX (reverse method)
+==================================================================================
+Idea : Reverse the expression, convert it almost like postfix, then reverse the
+       answer.
+
+STEPS
+1. Reverse the infix expression.
+   Example : (A + B) * C - D / E   becomes   E / D - C * ) B + A (
+
+2. Swap every "(" with ")" and every ")" with "(".
+   Why     : After reversing, the brackets face the wrong way.
+   Example : E / D - C * ( B + A )
+
+3. Convert this new expression to postfix with the SAME stack algorithm as
+   section 2, with ONE change in step 6a (the equal-precedence rule):
+      pop the top if it has HIGHER precedence, OR
+      if it has EQUAL precedence and the new operator is ^.
+   (Do NOT pop on equal precedence for + - * /.)
+   Why     : Reversing flips which side is "left". So the equal-precedence rule
+             flips too.
+
+4. Reverse the result. That is the prefix expression.
+
+DRY RUN (the expression from step 2: E / D - C * ( B + A ))
++------+--------+-------------------------------------+-----------------------+-------------------+
+| Step | Symbol | What happens                        | Stack (bottom to top) | Output            |
++------+--------+-------------------------------------+-----------------------+-------------------+
+| 1    | E      | operand goes to output              | (empty)               | E                 |
+| 2    | /      | push                                | /                     | E                 |
+| 3    | D      | operand goes to output              | /                     | E D               |
+| 4    | -      | top / is higher: pop /, then push - | -                     | E D /             |
+| 5    | C      | operand goes to output              | -                     | E D / C           |
+| 6    | *      | top - is lower: just push           | - *                   | E D / C           |
+| 7    | (      | push                                | - * (                 | E D / C           |
+| 8    | B      | operand goes to output              | - * (                 | E D / C B         |
+| 9    | +      | top is ( , so push                  | - * ( +               | E D / C B         |
+| 10   | A      | operand goes to output              | - * ( +               | E D / C B A       |
+| 11   | )      | pop + to output, remove (           | - *                   | E D / C B A +     |
+| 12   | end    | pop *, then pop -                   | (empty)               | E D / C B A + * - |
++------+--------+-------------------------------------+-----------------------+-------------------+
+Output so far : E D / C B A + * -
+Reverse it    : - * + A B C / D E        <-- the prefix expression
+
+
+==================================================================================
+4. EVALUATING A POSTFIX EXPRESSION WITH EXPRESSIONS (NO NUMBERS)
+==================================================================================
+Idea : Scan postfix and keep a stack of PIECES OF EXPRESSION. Each operator joins
+       the top two pieces. This turns postfix into prefix or into fully bracketed
+       infix. (Later, with numbers, the same scan works: the stack holds numbers
+       and the operator calculates the answer instead of joining text.)
+
+STEPS
+1. Create an empty stack.
+2. Read the postfix expression from LEFT to RIGHT.
+3. If the symbol is an operand: push it.
+4. If the symbol is an operator:
+      a) pop the top piece and call it second (it is the RIGHT operand)
+      b) pop the next piece and call it first (it is the LEFT operand)
+      c) join them and push the result:
+            to get PREFIX : operator + first + second     (example: + A B)
+            to get INFIX  : ( first operator second )     (example: (A+B))
+   Why     : The first pop is the right side. Mixing up the order gives a wrong
+             answer for - and /.
+5. At the end the stack has exactly ONE piece. That is the answer.
+
+DRY RUN for postfix A B + C * D E / -   (each [ ] is one piece)
++------+--------+-------------------------------+----------------------+---------------------+
+| Step | Symbol | What happens                  | Stack as PREFIX text | Stack as INFIX text |
++------+--------+-------------------------------+----------------------+---------------------+
+| 1    | A      | push                          | [A]                  | [A]                 |
+| 2    | B      | push                          | [A] [B]              | [A] [B]             |
+| 3    | +      | pop B, pop A, join            | [+ A B]              | [(A+B)]             |
+| 4    | C      | push                          | [+ A B] [C]          | [(A+B)] [C]         |
+| 5    | *      | pop C, pop the left one, join | [* + A B C]          | [((A+B)*C)]         |
+| 6    | D      | push                          | [* + A B C] [D]      | [((A+B)*C)] [D]     |
+| 7    | E      | push                          | [* + A B C] [D] [E]  | [((A+B)*C)] [D] [E] |
+| 8    | /      | pop E, pop D, join            | [* + A B C] [/ D E]  | [((A+B)*C)] [(D/E)] |
+| 9    | -      | pop both, join                | [- * + A B C / D E]  | [(((A+B)*C)-(D/E))] |
++------+--------+-------------------------------+----------------------+---------------------+
+Prefix result : - * + A B C / D E       (it matches section 3)
+Infix result  : (((A+B)*C)-(D/E))
+
+
+==================================================================================
+5. EQUAL PRECEDENCE: WHY THE RULE MATTERS
+==================================================================================
+Left to right operators (A - B - C):
+   Postfix : A B - C -        (the first - is popped before the second is pushed)
+   Prefix  : - - A B C        (this is why prefix does NOT pop on equal)
+
+Right to left operator (A ^ B ^ C):
+   Postfix : A B C ^ ^        (^ does NOT pop an equal ^)
+   Prefix  : ^ A ^ B C        (here the reversed rule pops an equal ^)
+
+
+==================================================================================
+6. ERRORS TO CHECK
+==================================================================================
++-----------------------------------------------------------------+--------------------------------------+-------------------------------+
+| Problem                                                         | How you notice it                    | What to do                    |
++-----------------------------------------------------------------+--------------------------------------+-------------------------------+
+| Missing )                                                       | a ( is still on the stack at the end | Report: brackets not balanced |
+| Missing (                                                       | no ( found while popping for )       | Report: brackets not balanced |
+| Two operators in a row                                          | e.g. A + * B                         | Report: invalid expression    |
+| Two operands in a row                                           | e.g. A B + C                         | Report: invalid expression    |
+| Postfix evaluation: stack has fewer than 2 items at an operator | pop fails                            | Report: invalid expression    |
++-----------------------------------------------------------------+--------------------------------------+-------------------------------+
+
+
+==================================================================================
+7. COMPLEXITY
+==================================================================================
+Time : O(n), every symbol is pushed and popped at most once
+Space: O(n), the stack can hold up to n symbols (for example, many "(")
+
+
+==================================================================================
+8. PREDICT (try before you read the answer)
+==================================================================================
+Q1. Convert A + B * C to postfix.
+A1. A B C * +   (* is stronger, so it is popped before +)
+
+Q2. Convert A - B - C to postfix.
+A2. A B - C -   (equal precedence, left to right: the first - goes out first)
+
+Q3. Convert (A + B) * (C - D) to postfix and to prefix.
+A3. Postfix: A B + C D - *      Prefix: * + A B - C D
+
+Q4. Convert A ^ B ^ C to postfix.
+A4. A B C ^ ^   (^ goes right to left, so an equal ^ stays on the stack)
+
+Q5. At the end of a correct conversion, what does the stack hold?
+A5. Nothing. It is empty. If "(" is left, the brackets were not balanced.
