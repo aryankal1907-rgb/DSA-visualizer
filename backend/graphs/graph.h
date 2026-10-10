@@ -9,10 +9,12 @@ using namespace std;
 class Graph {
 private:
     int vertices;
-    vector<list<int>> adj;
+    bool useMatrix;
+    vector<list<int>> adjList;
+    vector<vector<int>> adjMatrix;
 
 public:
-    Graph(int v);
+    Graph(int v, bool matrix = false);
 
     void addVertex();
     void addEdge(int u, int v);
@@ -20,6 +22,9 @@ public:
     void removeEdge(int u, int v);
 
     void display();
+    void displayMatrix();
+    void displayList();
+
     bool areAdjacent(int u, int v);
     int degree(int v);
 
